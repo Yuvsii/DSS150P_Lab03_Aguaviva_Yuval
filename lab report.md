@@ -57,7 +57,7 @@
 - Implemented `upsert_curated` in `src/load/postgres.py`.
 - Used `INSERT ... ON CONFLICT (order_id) DO UPDATE` to ensure safe reruns.
 - Optimized the UPSERT by adding `WHERE curated.sales_order_lines.record_hash IS DISTINCT FROM EXCLUDED.record_hash` to skip updating rows whose business data hasn't changed.
-- Verified idempotency: running `run-all` and then `load` multiple times resulted in exactly 49,897 total rows and 49,897 distinct `order_id`s.
+- Verified idempotency: running `run-all` and then `load` multiple times resulted in exactly 49,834 total rows and 49,834 distinct `order_id`s.
 
 ### Task F - Validation
 - Implemented `validate_curated` in `src/validate/quality.py` to run programmatic data quality checks.
@@ -72,29 +72,3 @@
 - [x] Curated amounts are calculated and audit columns are populated.
 - [x] Validation detects duplicate/null business keys and invalid amounts/statuses.
 - [x] Repeated load does not create duplicate `order_id` values.
-
-## Goal 3: Storage Systems, File Formats, and Data Organization
-
-### 9.5 Goal 3 Analysis Questions
-
-**1. Which file format was smallest on your machine, and what encoding/compression characteristics help explain the result?**
-Parquet was the smallest (5.4 MB), compared to CSV (15.2 MB) and JSON Lines (29.9 MB). This is because Parquet is a columnar format; storing values of the same type together allows for highly efficient dictionary encoding and run-length encoding. Additionally, it applies built-in block compression (like `snappy`) which significantly shrinks the footprint compared to text-based formats.
-
-**2. Which representation was fastest for a full dataset read? Does that imply it is best for every workload?**
-Parquet was the fastest for a full dataset read (median 0.09s), easily beating CSV (0.57s), JSONL (1.30s), and PostgreSQL (0.75s). However, this does not mean it is best for every workload. Parquet is immutable and designed for analytical workloads (OLAP) requiring bulk reads and column aggregations. For transactional workloads (OLTP) requiring rapid single-row inserts, updates, or point lookups, PostgreSQL is vastly superior due to its row-oriented engine and ACID guarantees.
-
-**3. How did filtered retrieval differ between Parquet and PostgreSQL? What additional PostgreSQL design (such as an index) could change the result?**
-For filtered retrieval (`status='DELIVERED'`), Parquet took 0.08s while PostgreSQL took 0.13s. Parquet utilizes predicate pushdown and column statistics to completely skip over blocks of data that don't match the filter. PostgreSQL, lacking an index on `status`, had to perform a full sequential table scan. If we added a B-Tree index on the `status` column in PostgreSQL, the query planner could instantly locate the matching rows via the index, potentially making the PostgreSQL query faster than Parquet for highly selective queries.
-
-**4. Why is JSON Lines generally more pipeline-friendly than one giant JSON array for append/stream-oriented processing?**
-JSON Lines (JSONL) stores each record as a completely valid JSON object on a new line (`\n`). This makes it extremely streamable—you can read, process, or append data line-by-line without loading the entire file into memory. A giant JSON array requires opening `[` and closing `]` brackets, meaning appending a new record requires modifying the end of the file, and parsing it often requires loading the entire array structure into memory.
-
-**5. What happens if a partition key has extremely high cardinality or poor query locality?**
-If a partition key has extremely high cardinality (e.g., partitioning by `order_id` or a precise `timestamp`), the system will generate thousands or millions of tiny partition folders and files. This is known as the "small file problem" and creates massive metadata overhead for the file system and query engines, destroying performance. Partition keys should group data into reasonably large, uniform chunks (like `year` and `month`) that match common query patterns.
-
-### Goal 3 Acceptance Tests
-- [x] CSV, JSONL, and Parquet represent the same logical row set. *(Verified: All formats return exactly 8,355 rows for the filtered test).*
-- [x] Benchmark uses repeated measurements and reports medians.
-- [x] Results include file size where meaningful and do not equate size alone with quality.
-- [x] Partitioned Parquet is organized by year/month. *(Verified: `data/partitioned/order_year=2026/order_month=9/` exists).*
-- [x] A selected partition can be loaded and audited in PostgreSQL. *(Verified: Loaded 951 rows for partition 2026-09 and successfully updated `audit.partition_loads`).*
