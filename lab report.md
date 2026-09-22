@@ -123,10 +123,10 @@ To backfill a historical month (e.g., January 2026), we would trigger a manual p
 Because our `load-partition` pipeline is idempotent, we can safely overwrite historical months without risk of double-loading. We avoid data duplication by relying on our `record_hash` UPSERT strategy in the data warehouse, meaning we do not need to manually delete the old partition before rerunning.
 
 ### 10.7 Goal 4 acceptance tests
-- [ ] Airflow imports the DAG without parse errors.
-- [ ] DAG has explicit schedule, parameters, dependencies, retries, timeout, and catchup behavior.
-- [ ] Full and partition-mode runs can be observed in Airflow.
-- [ ] Controlled failure produces visible retries/failure handling.
-- [ ] Recovery succeeds without manual database cleanup or duplicate business rows.
-- [ ] DAG code delegates actual pipeline logic to reusable modules/CLI.
-- [ ] One `pipeline_run_id` is propagated consistently across tasks in the same DAG run.
+- [x] Airflow imports the DAG without parse errors.
+- [x] DAG has explicit schedule, parameters, dependencies, retries, timeout, and catchup behavior.
+- [x] Full and partition-mode runs can be observed in Airflow.
+- [x] Controlled failure produces visible retries/failure handling.
+- [x] Recovery succeeds without manual database cleanup or duplicate business rows.
+- [x] DAG code delegates actual pipeline logic to reusable modules/CLI.
+- [x] One `pipeline_run_id` is propagated consistently across tasks in the same DAG run.
