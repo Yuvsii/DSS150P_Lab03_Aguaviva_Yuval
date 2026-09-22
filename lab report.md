@@ -108,21 +108,21 @@ If a partition key has extremely high cardinality (e.g., partitioning by `order_
 
 ## Goal 4: Workflow Orchestration and Scheduling with Apache Airflow
 
-### 10.2 Task B - Complete DAG operational configuration
+### Task B - Complete DAG operational configuration
 *   **Schedule (`0 2 * * *`):** Running the pipeline daily at 2:00 AM UTC is appropriate because it ensures the previous day's e-commerce transactions are fully settled and available. It also executes during low-traffic off-hours, minimizing database contention.
 *   **Catch-up Behavior (`catchup=False`):** Catchup is disabled to prevent Airflow from automatically triggering hundreds of historical DAG runs when the DAG is first turned on (since `start_date` is in the past). We want to control historical backfills manually.
 
-### 10.5 Task E - Deliberate failure and recovery
+### Task E - Deliberate failure and recovery
 To test recovery, we temporarily renamed `orders.csv` to `orders_hidden.csv`. 
 *   **Failure:** The DAG failed at the `extract` task. The failure callback printed the exact exception (`FileNotFoundError`). Airflow automatically retried twice with a 1-minute delay, as configured.
 *   **Recovery:** We restored the file name and cleared the failed `extract` task in the Airflow UI. Airflow successfully resumed execution from the `extract` task.
 *   **Safety:** It is completely safe to rerun because our `load` task uses idempotent PostgreSQL UPSERTs (with `ON CONFLICT (order_id)` and `record_hash` checking), guaranteeing that no duplicate business rows are created during retries.
 
-### 10.6 Optional challenge - backfill reasoning
+### Optional challenge - backfill reasoning
 To backfill a historical month (e.g., January 2026), we would trigger a manual parameterized run in the Airflow UI with `{"run_mode": "partition", "year": 2026, "month": 1}`. 
 Because our `load-partition` pipeline is idempotent, we can safely overwrite historical months without risk of double-loading. We avoid data duplication by relying on our `record_hash` UPSERT strategy in the data warehouse, meaning we do not need to manually delete the old partition before rerunning.
 
-### 10.7 Goal 4 acceptance tests
+### Goal 4 Acceptance Tests
 - [x] Airflow imports the DAG without parse errors.
 - [x] DAG has explicit schedule, parameters, dependencies, retries, timeout, and catchup behavior.
 - [x] Full and partition-mode runs can be observed in Airflow.
@@ -131,10 +131,7 @@ Because our `load-partition` pipeline is idempotent, we can safely overwrite his
 - [x] DAG code delegates actual pipeline logic to reusable modules/CLI.
 - [x] One `pipeline_run_id` is propagated consistently across tasks in the same DAG run.
 
-## Technical Reflection
-This laboratory successfully transformed raw CSV/JSON data into a highly robust and automated Data Engineering pipeline. By prioritizing **modularity**, the pipeline logic was strictly decoupled into distinct `extract`, `staging`, `curated`, and `load` stages, meaning logic changes in one area do not break others. **Idempotency** was achieved by using `record_hash` in an `UPSERT` configuration, ensuring that rerunning the pipeline or recovering from a failure never results in duplicated business rows. During the storage benchmarking, we observed clear **storage trade-offs**: while CSV is highly human-readable and JSONL supports nested streams, **Parquet** offered massive size reduction and read-speed advantages due to columnar compression and dictionary encoding. Finally, by strictly separating **orchestration vs business logic**, the Apache Airflow DAG remains a "thin orchestrator" that simply schedules and monitors execution using the `BashOperator`, keeping the actual transformation code highly portable and independently testable.
-
-## 15. Technical Questions
+## Technical Questions
 
 **1. Why is `record_hash` useful for rerun-safe loading, and which columns should not be included in it?**
 A `record_hash` allows the database to instantly verify if an incoming row actually contains modified business data compared to the existing row. If the hash matches, the UPSERT can be skipped, saving massive amounts of I/O and transaction log bloat. You should **never** include audit columns (like `processed_at_utc` or `pipeline_run_id`) in the hash, because these change on every single run; including them would trick the database into thinking the business data changed, causing useless updates on every rerun.
@@ -160,12 +157,11 @@ Partitioning too aggressively (e.g., partitioning by `hour` or `order_id` on a s
 **8. How would you adapt the pipeline if the source became an API or database instead of local files?**
 Thanks to our modular architecture, we would only need to rewrite the `src/extract/files.py` module to fetch data from the API/Database and save the raw response to the `data/raw/run_id=...` folder as a CSV/JSON file. The `staging`, `curated`, and `load` modules would not need to change at all, as they are decoupled from extraction.
 
-## 16. AI Tool Use and Academic Integrity
-**Acknowledgment of Generative AI Use:** 
-In accordance with the course policy, Generative AI (Antigravity IDE/Gemini) was utilized during this laboratory activity strictly as an aid for debugging complex errors (such as Docker port conflicts and Python dependency issues), generating boilerplate pipeline structure, and refining explanations of Data Engineering concepts (e.g., UPSERT idempotency and Parquet partitioning). 
-All final architectural decisions, pipeline workflows, and code logic were reviewed, understood, and successfully executed by the student on their local machine to ensure complete comprehension. The student takes full responsibility for defending the pipeline's behavior, design, and output during any validation checks.
+## AI Tool Use and Academic Integrity
+In accordance with the course policy, Generative AI (Gemini/Claude) was utilized during this laboratory activity strictly as an aid for debugging complex errors (such as Docker port conflicts and Python dependency issues), generating boilerplate pipeline structure, and refining explanations of Data Engineering concepts (e.g., UPSERT idempotency and Parquet partitioning). 
+All final architectural decisions, pipeline workflows, and code logic were reviewed, understood, and successfully executed by the student on their local machine to ensure complete comprehension.
 
-## 17. Final Submission Checklist
+## Final Submission Checklist
 
 ### Checklist A
 - [x] No .env/secrets committed.
