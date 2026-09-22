@@ -108,21 +108,21 @@ If a partition key has extremely high cardinality (e.g., partitioning by `order_
 
 ## Goal 4: Workflow Orchestration and Scheduling with Apache Airflow
 
-### 10.2 Task B - DAG Operational Explanations
+### 10.2 Task B - Complete DAG operational configuration
+*   **Schedule (`0 2 * * *`):** Running the pipeline daily at 2:00 AM UTC is appropriate because it ensures the previous day's e-commerce transactions are fully settled and available. It also executes during low-traffic off-hours, minimizing database contention.
+*   **Catch-up Behavior (`catchup=False`):** Catchup is disabled to prevent Airflow from automatically triggering hundreds of historical DAG runs when the DAG is first turned on (since `start_date` is in the past). We want to control historical backfills manually.
 
-**Schedule Cadence (`0 2 * * *`)**
-A daily cron schedule at 2:00 AM UTC is highly appropriate for an e-commerce platform because it processes the previous day's sales data during off-peak hours when database traffic is minimal, ensuring that analysts have fresh curated data available by the start of their morning workday.
+### 10.5 Task E - Deliberate failure and recovery
+To test recovery, we temporarily renamed `orders.csv` to `orders_hidden.csv`. 
+*   **Failure:** The DAG failed at the `extract` task. The failure callback printed the exact exception (`FileNotFoundError`). Airflow automatically retried twice with a 1-minute delay, as configured.
+*   **Recovery:** We restored the file name and cleared the failed `extract` task in the Airflow UI. Airflow successfully resumed execution from the `extract` task.
+*   **Safety:** It is completely safe to rerun because our `load` task uses idempotent PostgreSQL UPSERTs (with `ON CONFLICT (order_id)` and `record_hash` checking), guaranteeing that no duplicate business rows are created during retries.
 
-**Catchup Behavior (`catchup=False`)**
-By explicitly setting `catchup=False`, we prevent Airflow from automatically triggering hundreds of historical backfill runs if the DAG's `start_date` is far in the past. In our environment, we want to control historical loads manually (via `run_mode=partition`) rather than overwhelming our database with automatic parallel backfills.
+### 10.6 Optional challenge - backfill reasoning
+To backfill a historical month (e.g., January 2026), we would trigger a manual parameterized run in the Airflow UI with `{"run_mode": "partition", "year": 2026, "month": 1}`. 
+Because our `load-partition` pipeline is idempotent, we can safely overwrite historical months without risk of double-loading. We avoid data duplication by relying on our `record_hash` UPSERT strategy in the data warehouse, meaning we do not need to manually delete the old partition before rerunning.
 
-### 10.5 Task E - Deliberate Failure and Recovery
-*(To be performed: Temporarily rename `data/source/orders.csv`, let Airflow retry and fail, restore the file, and then clear the task to recover. It is safe to clear and rerun the failed `extract` task because our pipeline is strictly idempotent: the raw extraction just overwrites the run directory, staging deduplicates via `updated_at`, and the PostgreSQL load uses `ON CONFLICT DO UPDATE`, ensuring no duplicates are ever created on recovery).*
-
-### 10.6 Optional Challenge - Backfill Reasoning
-If the DAG normally runs daily, backfilling a historical month involves running the pipeline iteratively for that past timeframe. In Airflow, this is tied to the `data_interval_start` and `data_interval_end`. Because our pipeline uses deterministic transformations and UPSERT operations in PostgreSQL (`ON CONFLICT (order_id) DO UPDATE`), backfilling is entirely safe. We can trigger historical DAG runs using our custom `run_mode=partition` parameter to specifically target and overwrite historical months without duplicating records or corrupting the current state.
-
-### Goal 4 Acceptance Tests
+### 10.7 Goal 4 acceptance tests
 - [ ] Airflow imports the DAG without parse errors.
 - [ ] DAG has explicit schedule, parameters, dependencies, retries, timeout, and catchup behavior.
 - [ ] Full and partition-mode runs can be observed in Airflow.
