@@ -40,14 +40,11 @@ def _stage_customers(raw_dir: Path, run_id: str):
     # Normalize city: strip whitespace and title-case
     df['city'] = df['city'].str.strip().str.title()
 
-    # Quarantine missing emails
-    missing_email = df['email'].isna() | (df['email'] == '')
-    quarantine = df[missing_email].copy()
-    quarantine['quarantine_reason'] = 'missing_email'
-    valid = df[~missing_email].copy()
-
-    if len(quarantine) > 0:
-        logger.info('[STAGING] Quarantined %d customers (missing_email)', len(quarantine))
+    # Quarantine missing emails? No, the instructions say:
+    # "retain missing email as a visible quality condition"
+    # So we do NOT filter them out or quarantine them.
+    valid = df.copy()
+    quarantine = pd.DataFrame(columns=df.columns.tolist() + ['quarantine_reason'])
 
     # Add audit columns
     valid['pipeline_run_id'] = run_id
