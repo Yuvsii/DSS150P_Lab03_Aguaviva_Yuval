@@ -3,11 +3,11 @@
 This repository supports Module 2: Pipeline Construction, Storage, and Orchestration.
 It is intentionally incomplete. Students must implement the marked TODOs and document their decisions.
 
-## Current Progress Status
-- **[x] Goal 1:** Reproducible environment, modularization, Git, Docker, configuration. *(Completed)*
-- **[x] Goal 2:** Raw -> staging -> curated transformations; audit/error handling; rerun-safe loading. *(Completed)*
-- **[ ] Goal 3:** CSV/JSON/Parquet/PostgreSQL comparison; partitioning; selected-partition load. *(Not Started)*
-- **[ ] Goal 4:** Apache Airflow DAG for extract -> transform -> load -> validate. *(Not Started)*
+## Main progression
+- Goal 1: reproducible environment, modularization, Git, Docker, configuration
+- Goal 2: raw -> staging -> curated transformations; audit/error handling; rerun-safe loading
+- Goal 3: CSV/JSON/Parquet/PostgreSQL comparison; partitioning; selected-partition load
+- Goal 4: Apache Airflow DAG for extract -> transform -> load -> validate
 
 ## Architecture & Implementation Notes
 

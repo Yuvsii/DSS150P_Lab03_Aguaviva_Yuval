@@ -119,4 +119,14 @@ def build_curated(staging: dict, run_id: str):
     curated.to_parquet(curated_path, index=False)
     logger.info('[CURATED] Wrote %d curated rows to %s', len(curated), curated_path)
 
+    # Goal 3 Task C: Partitioned Parquet
+    partitioned_dir = path_for('partition_dir')
+    curated.to_parquet(
+        partitioned_dir, 
+        index=False, 
+        partition_cols=['order_year', 'order_month'],
+        existing_data_behavior='delete_matching' # overwrite old partitions safely
+    )
+    logger.info('[CURATED] Wrote partitioned parquet to %s', partitioned_dir)
+
     return curated
