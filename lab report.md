@@ -57,7 +57,7 @@
 - Implemented `upsert_curated` in `src/load/postgres.py`.
 - Used `INSERT ... ON CONFLICT (order_id) DO UPDATE` to ensure safe reruns.
 - Optimized the UPSERT by adding `WHERE curated.sales_order_lines.record_hash IS DISTINCT FROM EXCLUDED.record_hash` to skip updating rows whose business data hasn't changed.
-- Verified idempotency: running `run-all` and then `load` multiple times resulted in exactly 49,834 total rows and 49,834 distinct `order_id`s.
+- Verified idempotency: running `run-all` and then `load` multiple times resulted in exactly 49,897 total rows and 49,897 distinct `order_id`s.
 
 ### Task F - Validation
 - Implemented `validate_curated` in `src/validate/quality.py` to run programmatic data quality checks.
