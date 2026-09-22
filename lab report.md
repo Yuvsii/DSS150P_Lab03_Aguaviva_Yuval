@@ -157,6 +157,11 @@ Partitioning too aggressively (e.g., partitioning by `hour` or `order_id` on a s
 **8. How would you adapt the pipeline if the source became an API or database instead of local files?**
 Thanks to our modular architecture, we would only need to rewrite the `src/extract/files.py` module to fetch data from the API/Database and save the raw response to the `data/raw/run_id=...` folder as a CSV/JSON file. The `staging`, `curated`, and `load` modules would not need to change at all, as they are decoupled from extraction.
 
+## 16. AI Tool Use and Academic Integrity
+**Acknowledgment of Generative AI Use:** 
+In accordance with the course policy, Generative AI (Antigravity IDE/Gemini) was utilized during this laboratory activity strictly as an aid for debugging complex errors (such as Docker port conflicts and Python dependency issues), generating boilerplate pipeline structure, and refining explanations of Data Engineering concepts (e.g., UPSERT idempotency and Parquet partitioning). 
+All final architectural decisions, pipeline workflows, and code logic were reviewed, understood, and successfully executed by the student on their local machine to ensure complete comprehension. The student takes full responsibility for defending the pipeline's behavior, design, and output during any validation checks.
+
 ## 17. Final Submission Checklist
 
 ### Checklist A
