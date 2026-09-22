@@ -100,10 +100,15 @@ def main():
     elif args.command == 'load-partition':
         try:
             from src.load.postgres import load_partition
-            curated_path = path_for('curated_dir') / 'sales_order_lines.parquet'
-            if not curated_path.exists():
-                raise FileNotFoundError(f'[LOAD-PARTITION] Curated file not found: {curated_path}. Run transform first.')
-            curated_df = pd.read_parquet(curated_path)
+            partition_dir = path_for('partition_dir')
+            if not partition_dir.exists():
+                raise FileNotFoundError(f'[LOAD-PARTITION] Partition directory not found: {partition_dir}. Run transform first.')
+            
+            # Use PyArrow filter pushdown to only read the specific partition from disk!
+            curated_df = pd.read_parquet(
+                partition_dir, 
+                filters=[('order_year', '==', args.year), ('order_month', '==', args.month)]
+            )
             count = load_partition(curated_df, args.year, args.month, run_id)
             print(f'[LOAD-PARTITION] Done. Loaded {count} rows for {args.year}-{args.month:02d}.')
         except Exception as e:
