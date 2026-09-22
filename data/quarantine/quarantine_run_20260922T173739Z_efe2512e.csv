@@ -1,0 +1,8 @@
+customer_id,first_name,last_name,email,city,customer_tier,created_at,updated_at,quarantine_reason,source_entity,product_id,name,brand,unit_price,active,category,department,order_id,order_timestamp,quantity,discount_pct,status
+C01201,Tomas,Pascual,,Pasig,Bronze,2023-11-04 00:00:00+00:00,2025-10-05 08:53:00+00:00,missing_email,customers,,,,,,,,,,,,
+C02334,Julia,Reyes,,Parañaque,Bronze,2023-03-25 00:00:00+00:00,2025-05-29 15:02:00+00:00,missing_email,customers,,,,,,,,,,,,
+C00025,Yasmin,Torres,,Manila,Bronze,2023-09-02 00:00:00+00:00,2025-03-17 16:20:00+00:00,missing_email,customers,,,,,,,,,,,,
+C00412,Grace,Castillo,,Pasig,Gold,2023-12-09 00:00:00+00:00,2024-05-22 19:44:00+00:00,missing_email,customers,,,,,,,,,,,,
+,,,,,,,2025-07-29 00:00:00+00:00,invalid_unit_price,products,P0078,Nova Networking 078,Nova,-199.0,True,Networking,Computing,,,,,
+C02709,,,,,,,2025-11-11 06:39:00+00:00,quantity_out_of_range,orders,P0344,,,2785.93,,,,O0000112,2025-11-08 06:39:00+00:00,0.0,0.05,PACKED
+C00645,,,,,,,2026-07-13 05:22:00+00:00,invalid_status,orders,P0394,,,5199.2,,,,O0004445,2026-07-13 05:22:00+00:00,4.0,0.1,UNKNOWN
