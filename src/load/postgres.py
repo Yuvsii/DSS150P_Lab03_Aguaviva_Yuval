@@ -1,5 +1,5 @@
 import logging
-import psycopg
+import psycopg  # pyrefly: ignore [missing-import]
 from src.config import DB
 
 logger = logging.getLogger(__name__)
