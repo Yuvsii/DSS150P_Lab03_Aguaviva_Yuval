@@ -100,8 +100,13 @@ def load_partition(df, year: int, month: int, run_id: str) -> int:
         logger.warning('[LOAD-PARTITION] No data to load')
         return 0
 
-    # Filter to partition
-    partition = df[(df['order_year'] == year) & (df['order_month'] == month)]
+    # Goal 3 Task C: Verify its rows all belong to that year/month
+    invalid_rows = df[(df['order_year'] != year) | (df['order_month'] != month)]
+    if not invalid_rows.empty:
+        raise ValueError(f"[LOAD-PARTITION] Verification failed: Found {len(invalid_rows)} rows that do not belong to partition {year}-{month:02d}")
+
+    # The entire DataFrame should now be the valid partition
+    partition = df
     if partition.empty:
         logger.warning('[LOAD-PARTITION] No data for partition %d-%02d', year, month)
         return 0
