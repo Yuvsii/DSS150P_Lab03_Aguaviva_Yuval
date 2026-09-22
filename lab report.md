@@ -131,6 +131,9 @@ Because our `load-partition` pipeline is idempotent, we can safely overwrite his
 - [x] DAG code delegates actual pipeline logic to reusable modules/CLI.
 - [x] One `pipeline_run_id` is propagated consistently across tasks in the same DAG run.
 
+## Technical Reflection
+This laboratory successfully transformed raw CSV/JSON data into a highly robust and automated Data Engineering pipeline. By prioritizing **modularity**, the pipeline logic was strictly decoupled into distinct `extract`, `staging`, `curated`, and `load` stages, meaning logic changes in one area do not break others. **Idempotency** was achieved by using `record_hash` in an `UPSERT` configuration, ensuring that rerunning the pipeline or recovering from a failure never results in duplicated business rows. During the storage benchmarking, we observed clear **storage trade-offs**: while CSV is highly human-readable and JSONL supports nested streams, **Parquet** offered massive size reduction and read-speed advantages due to columnar compression and dictionary encoding. Finally, by strictly separating **orchestration vs business logic**, the Apache Airflow DAG remains a "thin orchestrator" that simply schedules and monitors execution using the `BashOperator`, keeping the actual transformation code highly portable and independently testable.
+
 ## 15. Technical Questions
 
 **1. Why is `record_hash` useful for rerun-safe loading, and which columns should not be included in it?**
