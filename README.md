@@ -32,7 +32,7 @@ It is intentionally incomplete. Students must implement the marked TODOs and doc
 - **Selective Loading**: Implemented partition-specific upserts and an `audit.partition_loads` tracking table.
 
 ### Lab Report
-Please refer to the [lab report.md](lab report.md) file for documented answers, technical evidence, benchmarks, and reflections.
+Please refer to the [lab report.md](./lab%20report.md) file for documented answers, technical evidence, benchmarks, and reflections.
 
 Start with `DSS150P_Laboratory_Activity_3.pdf`.
 
