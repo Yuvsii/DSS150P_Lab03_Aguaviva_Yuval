@@ -149,6 +149,11 @@ def run_benchmark(curated_dir: str | Path, benchmark_dir: str | Path, repeats: i
     finally:
         pg_conn.close()
 
+    import platform
+    print("\n--- HARDWARE/OS CONTEXT ---")
+    print(f"System: {platform.system()} {platform.release()} ({platform.machine()})")
+    print(f"Python: {platform.python_version()}")
+
     results_df = pd.DataFrame(results)
     print("\n--- BENCHMARK RESULTS ---")
     print(results_df.to_string(index=False))
