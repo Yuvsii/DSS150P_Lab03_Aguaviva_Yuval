@@ -73,14 +73,14 @@
 - [x] Validation detects duplicate/null business keys and invalid amounts/statuses.
 - [x] Repeated load does not create duplicate `order_id` values.
 
-### 9.3 Task C - Partitioned Parquet Explanation
+### Partitioned Parquet Explanation
 **How partitioning reduces unnecessary I/O:**
 When querying a partitioned Parquet dataset with a filter on a partition key (e.g., `order_year=2026`), the query engine utilizes "partition pruning" (or "filter pushdown"). Because the directory structure itself encodes the partition values, the engine completely ignores the directories/files that do not match the filter. This drastically reduces the amount of Disk I/O, as the engine doesn't even have to open or scan the irrelevant files, leading to significantly faster queries.
 
-### 9.4 Task D - Selective Partition Load Deduplication
+### Selective Partition Load Deduplication
 When the partition load is rerun for `2026-09`, the `audit.partition_loads` table updates its `loaded_at_utc` timestamp without creating duplicate entries (due to the `ON CONFLICT (partition_key) DO UPDATE` logic). Likewise, the business rows in `curated.sales_order_lines` remain completely deduplicated because `upsert_curated` uses `ON CONFLICT (order_id) DO UPDATE` combined with the `record_hash` check, preventing identical rows from being needlessly updated or duplicated.
 
-### 9.5 Goal 3 Analysis Questions
+### Goal 3 Analysis Questions
 
 *(Context: Benchmarks were run on Linux 6.18.33.2-microsoft-standard-WSL2 (x86_64) using Python 3.11.16 via Docker, reporting medians across 5 iterations).*
 
