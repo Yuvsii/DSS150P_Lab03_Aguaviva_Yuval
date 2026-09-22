@@ -9,6 +9,9 @@ It is intentionally incomplete. Students must implement the marked TODOs and doc
 - Goal 3: CSV/JSON/Parquet/PostgreSQL comparison; partitioning; selected-partition load
 - Goal 4: Apache Airflow DAG for extract -> transform -> load -> validate
 
+### Lab Report
+Please refer to the [lab report.md](lab report.md) file for documented answers, technical evidence, benchmarks, and reflections.
+
 Start with `DSS150P_Laboratory_Activity_3.pdf`.
 
 ## Recommended commands
