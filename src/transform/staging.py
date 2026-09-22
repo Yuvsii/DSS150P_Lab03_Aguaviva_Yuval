@@ -73,6 +73,9 @@ def _stage_products(raw_dir: Path, run_id: str):
     # Deduplicate
     df = _dedup(df, 'product_id')
 
+    # Parse price numeric
+    df['unit_price'] = pd.to_numeric(df['unit_price'], errors='coerce')
+
     # Quarantine invalid prices (null, <= 0)
     invalid_price = df['unit_price'].isna() | (df['unit_price'] <= 0)
     quarantine = df[invalid_price].copy()
