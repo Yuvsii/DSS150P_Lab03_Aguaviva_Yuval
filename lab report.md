@@ -73,14 +73,12 @@
 - [x] Validation detects duplicate/null business keys and invalid amounts/statuses.
 - [x] Repeated load does not create duplicate `order_id` values.
 
-### Partitioned Parquet Explanation
-**How partitioning reduces unnecessary I/O:**
-When querying a partitioned Parquet dataset with a filter on a partition key (e.g., `order_year=2026`), the query engine utilizes "partition pruning" (or "filter pushdown"). Because the directory structure itself encodes the partition values, the engine completely ignores the directories/files that do not match the filter. This drastically reduces the amount of Disk I/O, as the engine doesn't even have to open or scan the irrelevant files, leading to significantly faster queries.
+## Goal 3: Storage Systems, File Formats, and Data Organization
 
-### Selective Partition Load Deduplication
-When the partition load is rerun for `2026-09`, the `audit.partition_loads` table updates its `loaded_at_utc` timestamp without creating duplicate entries (due to the `ON CONFLICT (partition_key) DO UPDATE` logic). Likewise, the business rows in `curated.sales_order_lines` remain completely deduplicated because `upsert_curated` uses `ON CONFLICT (order_id) DO UPDATE` combined with the `record_hash` check, preventing identical rows from being needlessly updated or duplicated.
+### Task A - Materialize four storage representations
+- We successfully materialized the curated dataset into CSV, JSON Lines, and Snappy-compressed Parquet, as well as loaded it into PostgreSQL to prepare for benchmarking.
 
-### Goal 3 Analysis Questions
+### Task B - Benchmark methodology
 
 *(Context: Benchmarks were run on Linux 6.18.33.2-microsoft-standard-WSL2 (x86_64) using Python 3.11.16 via Docker, reporting medians across 5 iterations).*
 
@@ -99,6 +97,14 @@ JSON Lines (JSONL) stores each record as a completely valid JSON object on a new
 **5. What happens if a partition key has extremely high cardinality or poor query locality?**
 If a partition key has extremely high cardinality (e.g., partitioning by `order_id` or a precise `timestamp`), the system will generate thousands or millions of tiny partition folders and files. This is known as the "small file problem" and creates massive metadata overhead for the file system and query engines, destroying performance. Partition keys should group data into reasonably large, uniform chunks (like `year` and `month`) that match common query patterns.
 
+### Task C - Partitioned Parquet
+**How partitioning reduces unnecessary I/O:**
+When querying a partitioned Parquet dataset with a filter on a partition key (e.g., `order_year=2026`), the query engine utilizes "partition pruning" (or "filter pushdown"). Because the directory structure itself encodes the partition values, the engine completely ignores the directories/files that do not match the filter. This drastically reduces the amount of Disk I/O, as the engine doesn't even have to open or scan the irrelevant files, leading to significantly faster queries.
+
+### Task D - Load a selected partition to PostgreSQL
+**Selective Partition Load Deduplication:**
+When the partition load is rerun for `2026-09`, the `audit.partition_loads` table updates its `loaded_at_utc` timestamp without creating duplicate entries (due to the `ON CONFLICT (partition_key) DO UPDATE` logic). Likewise, the business rows in `curated.sales_order_lines` remain completely deduplicated because `upsert_curated` uses `ON CONFLICT (order_id) DO UPDATE` combined with the `record_hash` check, preventing identical rows from being needlessly updated or duplicated.
+
 ### Goal 3 Acceptance Tests
 - [x] CSV, JSONL, and Parquet represent the same logical row set. *(Verified: All formats return exactly 8,355 rows for the filtered test).*
 - [x] Benchmark uses repeated measurements and reports medians.
@@ -108,9 +114,18 @@ If a partition key has extremely high cardinality (e.g., partitioning by `order_
 
 ## Goal 4: Workflow Orchestration and Scheduling with Apache Airflow
 
+### Task A - Initialize Airflow
+- Successfully initialized the Airflow environment using Docker Compose and accessed the webserver on port 8081.
+
 ### Task B - Complete DAG operational configuration
 *   **Schedule (`0 2 * * *`):** Running the pipeline daily at 2:00 AM UTC is appropriate because it ensures the previous day's e-commerce transactions are fully settled and available. It also executes during low-traffic off-hours, minimizing database contention.
 *   **Catch-up Behavior (`catchup=False`):** Catchup is disabled to prevent Airflow from automatically triggering hundreds of historical DAG runs when the DAG is first turned on (since `start_date` is in the past). We want to control historical backfills manually.
+
+### Task C - Run and inspect execution states
+- Triggered a manual full run. The DAG successfully executed all four tasks (`extract` -> `transform` -> `load` -> `validate`) in sequence and generated a consistent `pipeline_run_id` across the run.
+
+### Task D - Parameterized partition run
+- Triggered a DAG run using `{"run_mode": "partition", "year": 2026, "month": 1}`. The load task correctly loaded only the specified partition, and the `audit.partition_loads` table was successfully updated.
 
 ### Task E - Deliberate failure and recovery
 To test recovery, we temporarily renamed `orders.csv` to `orders_hidden.csv`. 
