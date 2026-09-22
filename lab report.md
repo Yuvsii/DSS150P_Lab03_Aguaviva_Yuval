@@ -58,3 +58,9 @@
 - Used `INSERT ... ON CONFLICT (order_id) DO UPDATE` to ensure safe reruns.
 - Optimized the UPSERT by adding `WHERE curated.sales_order_lines.record_hash IS DISTINCT FROM EXCLUDED.record_hash` to skip updating rows whose business data hasn't changed.
 - Verified idempotency: running `run-all` and then `load` multiple times resulted in exactly 49,834 total rows and 49,834 distinct `order_id`s.
+
+### Task F - Validation
+- Implemented `validate_curated` in `src/validate/quality.py` to run programmatic data quality checks.
+- Validated that `order_id` values are unique and non-null, `quantity` is within the valid range (1-20), amounts are non-negative, and `status` is one of the allowed categorical values.
+- Checked that all audit tracking columns (`pipeline_run_id`, `processed_at_utc`, `record_hash`) are fully populated. 
+- Integrated this step into the `run-all` command so the pipeline automatically verifies data integrity at the end of the run.
