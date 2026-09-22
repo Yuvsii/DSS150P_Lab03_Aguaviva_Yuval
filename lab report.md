@@ -64,3 +64,11 @@
 - Validated that `order_id` values are unique and non-null, `quantity` is within the valid range (1-20), amounts are non-negative, and `status` is one of the allowed categorical values.
 - Checked that all audit tracking columns (`pipeline_run_id`, `processed_at_utc`, `record_hash`) are fully populated. 
 - Integrated this step into the `run-all` command so the pipeline automatically verifies data integrity at the end of the run.
+
+### Goal 2 Acceptance Tests
+- [x] Raw snapshots are run-specific and source files remain unchanged.
+- [x] Duplicate business keys are resolved deterministically using latest `updated_at`.
+- [x] Invalid technical records and orphan references are quarantined with reasons.
+- [x] Curated amounts are calculated and audit columns are populated.
+- [x] Validation detects duplicate/null business keys and invalid amounts/statuses.
+- [x] Repeated load does not create duplicate `order_id` values.
