@@ -25,6 +25,12 @@ It is intentionally incomplete. Students must implement the marked TODOs and doc
 - **Load (Idempotent UPSERT):** Rerun-safe PostgreSQL loading is implemented using `INSERT ... ON CONFLICT (order_id) DO UPDATE`. A `record_hash` ensures we only update rows if the business content has actually changed.
 - **Validation:** Automated quality checks verify total completeness and integrity of the final curated data.
 
+### Goal 3: Storage Systems & Benchmarking
+- **Materialization**: Wrote the curated dataset to CSV, JSON Lines, and Snappy-compressed Parquet.
+- **Benchmarking**: Implemented a median-of-5 timing strategy for full and filtered reads across all formats and PostgreSQL.
+- **Partitioning**: Organized the curated data into Hive-style Parquet partitions (`order_year` and `order_month`).
+- **Selective Loading**: Implemented partition-specific upserts and an `audit.partition_loads` tracking table.
+
 ### Lab Report
 Please refer to the [lab report.md](lab report.md) file for documented answers, technical evidence, benchmarks, and reflections.
 
