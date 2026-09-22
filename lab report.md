@@ -130,3 +130,45 @@ Because our `load-partition` pipeline is idempotent, we can safely overwrite his
 - [x] Recovery succeeds without manual database cleanup or duplicate business rows.
 - [x] DAG code delegates actual pipeline logic to reusable modules/CLI.
 - [x] One `pipeline_run_id` is propagated consistently across tasks in the same DAG run.
+
+## 15. Technical Questions
+
+**1. Why is `record_hash` useful for rerun-safe loading, and which columns should not be included in it?**
+A `record_hash` allows the database to instantly verify if an incoming row actually contains modified business data compared to the existing row. If the hash matches, the UPSERT can be skipped, saving massive amounts of I/O and transaction log bloat. You should **never** include audit columns (like `processed_at_utc` or `pipeline_run_id`) in the hash, because these change on every single run; including them would trick the database into thinking the business data changed, causing useless updates on every rerun.
+
+**2. Why should raw data usually be preserved even when staging/curated outputs are sufficient for analytics?**
+Raw data serves as the immutable source of truth. If a bug in the transformation logic is discovered months later, or if a new business requirement requires parsing a previously ignored column, preserving the raw data allows us to completely recalculate and backfill the staging/curated layers from scratch.
+
+**3. What is the difference between a data-quality rejection and a system exception?**
+A data-quality rejection occurs when the system is working perfectly, but the *data* violates a business rule (e.g., negative price). The row is safely routed to a quarantine folder, and the pipeline continues. A system exception occurs when the code or infrastructure fails (e.g., missing file, database offline, memory error). The pipeline must immediately abort to prevent corruption.
+
+**4. Why might Parquet outperform CSV for selected analytical workloads even if both contain the same rows?**
+Parquet uses a columnar layout, meaning a query that only selects 2 columns (out of 50) only reads those 2 columns from disk, whereas CSV must read the entire file line-by-line. Parquet also uses strong data types (eliminating expensive string parsing) and applies aggressive dictionary encoding and block compression.
+
+**5. Why is a DAG that contains all transformation logic directly considered harder to maintain?**
+If a DAG contains business logic (e.g., Pandas transformations directly inside a `PythonOperator`), the code becomes tightly coupled to Airflow. It cannot be run locally, it cannot be unit tested without a full Airflow environment, and it cannot be triggered by other schedulers. By keeping the DAG as a "thin orchestrator" that simply calls `src.cli`, the pipeline remains portable.
+
+**6. How do retries interact with idempotency? Give an example where retries without idempotency cause damage.**
+Retries are only safe if the task is idempotent (meaning running it 1 time or 100 times produces the exact same final state). If a `load` task uses standard `INSERT` statements and crashes halfway through, Airflow will retry the task. Without idempotency, the retry will `INSERT` the first half of the rows *again*, causing massive data duplication.
+
+**7. What trade-off is introduced by partitioning too aggressively?**
+Partitioning too aggressively (e.g., partitioning by `hour` or `order_id` on a small dataset) creates the "small file problem." The file system will generate thousands of tiny partition folders and files. The query engine will then spend significantly more time opening files and reading metadata than actually scanning data, destroying read performance.
+
+**8. How would you adapt the pipeline if the source became an API or database instead of local files?**
+Thanks to our modular architecture, we would only need to rewrite the `src/extract/files.py` module to fetch data from the API/Database and save the raw response to the `data/raw/run_id=...` folder as a CSV/JSON file. The `staging`, `curated`, and `load` modules would not need to change at all, as they are decoupled from extraction.
+
+## 17. Final Submission Checklist
+
+### Checklist A
+- [x] No .env/secrets committed.
+- [x] Source files unchanged.
+- [x] Rerun-safe PostgreSQL load verified.
+- [x] Partitioned Parquet and selected-partition load verified.
+- [x] Git history includes Goal 1-4 checkpoints.
+
+### Checklist B
+- [x] All required commands documented in README.
+- [x] Staging/curated/quarantine outputs reproducible.
+- [x] Benchmark results and interpretation included.
+- [x] Airflow full/partition/failure/recovery evidence included.
+- [x] Repository runs without relying on undocumented manual edits
