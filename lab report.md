@@ -105,3 +105,28 @@ If a partition key has extremely high cardinality (e.g., partitioning by `order_
 - [x] Results include file size where meaningful and do not equate size alone with quality.
 - [x] Partitioned Parquet is organized by year/month. *(Verified: `data/partitioned/order_year=2026/order_month=9/` exists).*
 - [x] A selected partition can be loaded and audited in PostgreSQL. *(Verified: Loaded 951 rows for partition 2026-09 and successfully updated `audit.partition_loads`).*
+
+## Goal 4: Workflow Orchestration and Scheduling with Apache Airflow
+
+### 10.2 Task B - DAG Operational Explanations
+
+**Schedule Cadence (`0 2 * * *`)**
+A daily cron schedule at 2:00 AM UTC is highly appropriate for an e-commerce platform because it processes the previous day's sales data during off-peak hours when database traffic is minimal, ensuring that analysts have fresh curated data available by the start of their morning workday.
+
+**Catchup Behavior (`catchup=False`)**
+By explicitly setting `catchup=False`, we prevent Airflow from automatically triggering hundreds of historical backfill runs if the DAG's `start_date` is far in the past. In our environment, we want to control historical loads manually (via `run_mode=partition`) rather than overwhelming our database with automatic parallel backfills.
+
+### 10.5 Task E - Deliberate Failure and Recovery
+*(To be performed: Temporarily rename `data/source/orders.csv`, let Airflow retry and fail, restore the file, and then clear the task to recover. It is safe to clear and rerun the failed `extract` task because our pipeline is strictly idempotent: the raw extraction just overwrites the run directory, staging deduplicates via `updated_at`, and the PostgreSQL load uses `ON CONFLICT DO UPDATE`, ensuring no duplicates are ever created on recovery).*
+
+### 10.6 Optional Challenge - Backfill Reasoning
+If the DAG normally runs daily, backfilling a historical month involves running the pipeline iteratively for that past timeframe. In Airflow, this is tied to the `data_interval_start` and `data_interval_end`. Because our pipeline uses deterministic transformations and UPSERT operations in PostgreSQL (`ON CONFLICT (order_id) DO UPDATE`), backfilling is entirely safe. We can trigger historical DAG runs using our custom `run_mode=partition` parameter to specifically target and overwrite historical months without duplicating records or corrupting the current state.
+
+### Goal 4 Acceptance Tests
+- [ ] Airflow imports the DAG without parse errors.
+- [ ] DAG has explicit schedule, parameters, dependencies, retries, timeout, and catchup behavior.
+- [ ] Full and partition-mode runs can be observed in Airflow.
+- [ ] Controlled failure produces visible retries/failure handling.
+- [ ] Recovery succeeds without manual database cleanup or duplicate business rows.
+- [ ] DAG code delegates actual pipeline logic to reusable modules/CLI.
+- [ ] One `pipeline_run_id` is propagated consistently across tasks in the same DAG run.

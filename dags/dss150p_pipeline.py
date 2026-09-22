@@ -6,13 +6,17 @@ from airflow.operators.bash import BashOperator
 PROJECT = '/opt/airflow/project'
 
 def failure_callback(context):
-    # TODO Goal 4: write a concise failure record or print meaningful context.
-    print('TASK FAILED:', context['task_instance'].task_id)
+    print('==================== DAG FAILURE ====================')
+    print(f"Task Failed: {context['task_instance'].task_id}")
+    print(f"Run ID: {context['run_id']}")
+    print(f"Execution Date: {context['execution_date']}")
+    print('=====================================================')
 
 DEFAULT_ARGS = {
     'owner': 'dss150p',
     'retries': 2,
     'retry_delay': timedelta(minutes=1),
+    'execution_timeout': timedelta(minutes=10), # Task B: Prevent hanging tasks
     'on_failure_callback': failure_callback,
 }
 
@@ -37,15 +41,24 @@ with DAG(
         task_id='transform',
         bash_command=f'cd {PROJECT} && PIPELINE_RUN_ID="{{{{ run_id }}}}" python -m src.cli transform',
     )
+    
+    # Task B: Parameterized partition load
+    load_cmd = (
+        f'cd {PROJECT} && PIPELINE_RUN_ID="{{{{ run_id }}}}" '
+        '{% if params.run_mode == "partition" %}'
+        'python -m src.cli load-partition --year {{ params.year }} --month {{ params.month }}'
+        '{% else %}'
+        'python -m src.cli load'
+        '{% endif %}'
+    )
     load = BashOperator(
         task_id='load',
-        bash_command=f'cd {PROJECT} && PIPELINE_RUN_ID="{{{{ run_id }}}}" python -m src.cli load',
+        bash_command=load_cmd,
     )
+    
     validate = BashOperator(
         task_id='validate',
         bash_command=f'cd {PROJECT} && PIPELINE_RUN_ID="{{{{ run_id }}}}" python -m src.cli validate',
     )
 
-    # TODO Goal 4: confirm dependencies, timeouts, parameter usage,
-    # and a deliberate failure/recovery experiment.
     extract >> transform >> load >> validate
